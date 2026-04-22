@@ -449,6 +449,96 @@ func TestMove_movesTaskBetweenFiles(t *testing.T) {
 	}
 }
 
+// ── Listall ───────────────────────────────────────────────────────────────────
+
+func TestListall_doneItemsLineNumberZero(t *testing.T) {
+	app, dir := newTestApp(t, "Buy milk", "Call Mom")
+	// Write a done item to done.txt.
+	donePath := filepath.Join(dir, "done.txt")
+	os.WriteFile(donePath, []byte("x 2026-04-22 Done task\n"), 0644)
+
+	var capturedItems []string
+	out := captureStdout(t, func() {
+		app.Listall(nil)
+	})
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "Done task") {
+			capturedItems = append(capturedItems, line)
+		}
+	}
+	if len(capturedItems) == 0 {
+		t.Fatal("done task not found in listall output")
+	}
+	if !strings.HasPrefix(strings.TrimSpace(capturedItems[0]), "0 ") {
+		t.Errorf("done item should have line number 0, got %q", capturedItems[0])
+	}
+}
+
+func TestListall_summaryShowsPerFileCounts(t *testing.T) {
+	app, dir := newTestApp(t, "Task one", "Task two")
+	donePath := filepath.Join(dir, "done.txt")
+	os.WriteFile(donePath, []byte("x 2026-04-22 Done one\nx 2026-04-22 Done two\n"), 0644)
+
+	out := captureStdout(t, func() {
+		app.Listall(nil)
+	})
+	if !strings.Contains(out, "TODO: 2 of 2 tasks shown") {
+		t.Errorf("missing TODO count line in:\n%s", out)
+	}
+	if !strings.Contains(out, "DONE: 2 of 2 tasks shown") {
+		t.Errorf("missing DONE count line in:\n%s", out)
+	}
+	if !strings.Contains(out, "total 4 of 4 tasks shown") {
+		t.Errorf("missing total count line in:\n%s", out)
+	}
+}
+
+func TestListall_sortedAlphabetically(t *testing.T) {
+	app, _ := newTestApp(t, "Zucchini", "Apple", "Mango")
+
+	out := captureStdout(t, func() {
+		app.Listall(nil)
+	})
+	lines := []string{}
+	for _, l := range strings.Split(out, "\n") {
+		if strings.Contains(l, "Apple") || strings.Contains(l, "Mango") || strings.Contains(l, "Zucchini") {
+			lines = append(lines, l)
+		}
+	}
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 task lines, got %v", lines)
+	}
+	if !strings.Contains(lines[0], "Apple") || !strings.Contains(lines[1], "Mango") || !strings.Contains(lines[2], "Zucchini") {
+		t.Errorf("not sorted alphabetically: %v", lines)
+	}
+}
+
+func TestListall_includesBlanksWithNoTerms(t *testing.T) {
+	app, _ := newTestApp(t, "Task one", "", "Task three")
+
+	out := captureStdout(t, func() {
+		app.Listall(nil)
+	})
+	// Blank line preserved: output should have a line with just a number.
+	lineCount := 0
+	for _, l := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		if strings.TrimSpace(l) == "2" || l == "2 " || strings.HasSuffix(strings.TrimRight(l, " "), "2") && strings.Contains(l, " ") && !strings.Contains(l, "Task") {
+			lineCount++
+		}
+	}
+	// Simpler check: total output lines before "--" should include the blank.
+	taskLines := 0
+	for _, l := range strings.Split(out, "\n") {
+		if l == "--" {
+			break
+		}
+		taskLines++
+	}
+	if taskLines != 3 {
+		t.Errorf("expected 3 lines (including blank) before --, got %d", taskLines)
+	}
+}
+
 // ── isPrioritySpec ────────────────────────────────────────────────────────────
 
 func TestIsPrioritySpec(t *testing.T) {

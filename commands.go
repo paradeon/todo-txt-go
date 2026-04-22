@@ -497,31 +497,48 @@ func (app *App) Listall(args []string) error {
 
 	totalTodo := len(todoItems)
 	totalDone := len(doneItems)
-	wTodo := numWidth(totalTodo)
-	wDone := numWidth(totalDone)
-	if wTodo < wDone {
-		wTodo = wDone
+	// Padding is based on todo.txt line count only, matching the original.
+	// Done items are all displayed as 0 so they don't affect width.
+	w := numWidth(totalTodo)
+
+	// Done items are not addressable by line number, so display them as 0.
+	for i := range doneItems {
+		doneItems[i].LineNum = 0
 	}
 
-	var all []Item
-	for _, item := range todoItems {
-		if item.Raw != "" {
-			all = append(all, item)
-		}
-	}
-	for _, item := range doneItems {
-		if item.Raw != "" {
-			all = append(all, item)
-		}
+	all := append(todoItems, doneItems...)
+
+	// Include blank lines when no terms are given (matching original cat behaviour).
+	// When terms are present, FilterItems naturally excludes blanks.
+	var filtered []Item
+	if len(args) == 0 {
+		filtered = all
+	} else {
+		filtered = FilterItems(all, args)
 	}
 
-	filtered := FilterItems(all, args)
-	sorted := SortByPriority(filtered)
+	sorted := SortAlphabetical(filtered)
 
 	for _, item := range sorted {
-		fmt.Println(FormatItem(item, app.cfg, wTodo))
+		fmt.Println(FormatItem(item, app.cfg, w))
 	}
-	fmt.Printf("--\nTODO: %d tasks shown\n", len(sorted))
+
+	// Count non-blank shown items per source for the summary line.
+	shownTodo, shownDone := 0, 0
+	for _, item := range sorted {
+		if item.Raw == "" {
+			continue
+		}
+		if item.Done {
+			shownDone++
+		} else {
+			shownTodo++
+		}
+	}
+	fmt.Println("--")
+	fmt.Printf("TODO: %d of %d tasks shown\n", shownTodo, totalTodo)
+	fmt.Printf("DONE: %d of %d tasks shown\n", shownDone, totalDone)
+	fmt.Printf("total %d of %d tasks shown\n", shownTodo+shownDone, totalTodo+totalDone)
 	return nil
 }
 

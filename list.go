@@ -84,6 +84,17 @@ func FilterItems(items []Item, terms []string) []Item {
 	return result
 }
 
+// SortAlphabetical sorts items case-insensitively by raw text, matching the
+// original todo.txt-cli default (env LC_COLLATE=C sort -f -k2).
+func SortAlphabetical(items []Item) []Item {
+	out := make([]Item, len(items))
+	copy(out, items)
+	sort.SliceStable(out, func(i, j int) bool {
+		return strings.ToLower(out[i].Raw) < strings.ToLower(out[j].Raw)
+	})
+	return out
+}
+
 // SortByPriority sorts: prioritised tasks first (A < B < …), then unprioritised,
 // then done tasks. Secondary sort preserves original line order.
 func SortByPriority(items []Item) []Item {

@@ -66,6 +66,46 @@ func TestNumWidth(t *testing.T) {
 	}
 }
 
+// ── SortAlphabetical ──────────────────────────────────────────────────────────
+
+func TestSortAlphabetical_order(t *testing.T) {
+	items := []Item{
+		ParseItem("Banana", 1),
+		ParseItem("(A) Apple", 2),
+		ParseItem("Cherry", 3),
+	}
+	sorted := SortAlphabetical(items)
+	// (A) sorts before A-Z letters because '(' < 'A' in ASCII.
+	if sorted[0].Raw != "(A) Apple" {
+		t.Errorf("expected (A) Apple first, got %q", sorted[0].Raw)
+	}
+	if sorted[1].Raw != "Banana" {
+		t.Errorf("expected Banana second, got %q", sorted[1].Raw)
+	}
+	if sorted[2].Raw != "Cherry" {
+		t.Errorf("expected Cherry third, got %q", sorted[2].Raw)
+	}
+}
+
+func TestSortAlphabetical_caseInsensitive(t *testing.T) {
+	items := []Item{
+		ParseItem("banana", 1),
+		ParseItem("Apple", 2),
+	}
+	sorted := SortAlphabetical(items)
+	if sorted[0].Raw != "Apple" {
+		t.Errorf("expected Apple first (case-insensitive), got %q", sorted[0].Raw)
+	}
+}
+
+func TestSortAlphabetical_doesNotMutateOriginal(t *testing.T) {
+	items := []Item{ParseItem("Zzz", 1), ParseItem("Aaa", 2)}
+	SortAlphabetical(items)
+	if items[0].Raw != "Zzz" {
+		t.Error("original slice should not be mutated")
+	}
+}
+
 // ── FilterItems ───────────────────────────────────────────────────────────────
 
 func TestFilterItems_noTerms(t *testing.T) {
