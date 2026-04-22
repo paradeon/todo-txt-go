@@ -14,6 +14,7 @@ type Config struct {
 	DoneFile      string
 	ReportFile    string
 	DateOnAdd     bool   // -t / TODOTXT_DATE_ON_ADD
+	AutoArchive   bool   // TODOTXT_AUTO_ARCHIVE (default true)
 	Force         bool   // -f
 	Plain         bool   // -p / -n
 	Verbose       bool   // -v / TODOTXT_VERBOSE=2
@@ -29,11 +30,12 @@ func DefaultConfig() Config {
 		todoDir = d
 	}
 	cfg := Config{
-		TodoDir:    todoDir,
-		TodoFile:   filepath.Join(todoDir, "todo.txt"),
-		DoneFile:   filepath.Join(todoDir, "done.txt"),
-		ReportFile: filepath.Join(todoDir, "report.txt"),
-		Colors:     DefaultColorScheme(),
+		TodoDir:     todoDir,
+		TodoFile:    filepath.Join(todoDir, "todo.txt"),
+		DoneFile:    filepath.Join(todoDir, "done.txt"),
+		ReportFile:  filepath.Join(todoDir, "report.txt"),
+		AutoArchive: true,
+		Colors:      DefaultColorScheme(),
 	}
 	if f := os.Getenv("TODO_FILE"); f != "" {
 		cfg.TodoFile = f
@@ -131,6 +133,8 @@ func LoadConfig(path string) (Config, error) {
 			cfg.Verbose = val == "2"
 		case "TODOTXT_DATE_ON_ADD":
 			cfg.DateOnAdd = val == "1"
+		case "TODOTXT_AUTO_ARCHIVE":
+			cfg.AutoArchive = val != "0"
 		case "TODOTXT_DEFAULT_ACTION":
 			cfg.DefaultAction = val
 		case "PRI_A":

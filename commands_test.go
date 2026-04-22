@@ -55,11 +55,12 @@ func newTestApp(t *testing.T, todoLines ...string) (*App, string) {
 	f.Close()
 
 	cfg := Config{
-		TodoDir:    dir,
-		TodoFile:   todoPath,
-		DoneFile:   donePath,
-		ReportFile: reportPath,
-		Force:      true,
+		TodoDir:     dir,
+		TodoFile:    todoPath,
+		DoneFile:    donePath,
+		ReportFile:  reportPath,
+		Force:       true,
+		AutoArchive: false,
 	}
 	return NewApp(cfg), dir
 }
@@ -277,8 +278,38 @@ func TestDo_marksTaskDone(t *testing.T) {
 	if items[0].CompletionDate != today {
 		t.Errorf("completion date: got %q, want %q", items[0].CompletionDate, today)
 	}
+	// Priority must be stripped.
+	if strings.Contains(items[0].Raw, "(A)") {
+		t.Errorf("priority should be stripped on do, got %q", items[0].Raw)
+	}
 	if items[1].Done {
 		t.Error("item 2 should not be affected")
+	}
+}
+
+func TestDo_bakContainsDoneMarkedContent(t *testing.T) {
+	app, _ := newTestApp(t, "Call Mom")
+	captureStdout(t, func() {
+		app.Do([]string{"1"})
+	})
+	bak, err := ReadItems(app.cfg.TodoFile + ".bak")
+	if err != nil {
+		t.Fatal("todo.txt.bak should be created after do")
+	}
+	if len(bak) != 1 || !bak[0].Done {
+		t.Errorf("todo.txt.bak should contain the done-marked item, got %v", bak)
+	}
+}
+
+func TestDo_stripsPriorityBeforeDate(t *testing.T) {
+	app, _ := newTestApp(t, "(B) 2026-04-01 Buy milk")
+	captureStdout(t, func() {
+		app.Do([]string{"1"})
+	})
+	items, _ := ReadItems(app.cfg.TodoFile)
+	want := "x " + app.today() + " 2026-04-01 Buy milk"
+	if items[0].Raw != want {
+		t.Errorf("got %q, want %q", items[0].Raw, want)
 	}
 }
 
@@ -300,6 +331,25 @@ func TestDo_multipleTasks(t *testing.T) {
 	items, _ := ReadItems(app.cfg.TodoFile)
 	if !items[0].Done || items[1].Done || !items[2].Done {
 		t.Error("items 1 and 3 should be done, 2 should not")
+	}
+}
+
+func TestDo_autoArchiveMovesDoneItemToDoneFile(t *testing.T) {
+	app, _ := newTestApp(t, "Call Mom", "Buy milk")
+	app.cfg.AutoArchive = true
+	captureStdout(t, func() {
+		app.Do([]string{"1"})
+	})
+	todo, _ := ReadItems(app.cfg.TodoFile)
+	done, _ := ReadItems(app.cfg.DoneFile)
+
+	for _, item := range todo {
+		if item.Done {
+			t.Errorf("done item should not remain in todo.txt after auto-archive: %q", item.Raw)
+		}
+	}
+	if len(done) != 1 || !done[0].Done {
+		t.Errorf("done item should appear in done.txt: %v", done)
 	}
 }
 

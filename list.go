@@ -120,7 +120,7 @@ func FormatItem(item Item, cfg Config, width int) string {
 	}
 
 	cs := cfg.Colors
-	numOut := applyColor(numStr, cs.Number)
+	numOut := applyColor(numStr, itemBaseColor(item, cs))
 	return numOut + " " + colorizeItem(item, text, cs)
 }
 

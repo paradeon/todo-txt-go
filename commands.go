@@ -214,6 +214,11 @@ func (app *App) Archive() error {
 		remaining[i].LineNum = i + 1
 	}
 
+	// Backup after blank-line removal but before removing done items,
+	// matching the state sed -i.bak leaves in the original todo.txt-cli.
+	if err := backupFile(app.cfg.TodoFile); err != nil {
+		return err
+	}
 	if err := app.writeTodo(remaining); err != nil {
 		return err
 	}
@@ -402,8 +407,12 @@ func (app *App) Do(args []string) error {
 			fmt.Printf("TODO: %d is already done.\n", nr)
 			continue
 		}
-		// Prepend "x YYYY-MM-DD " to the raw line, preserving everything else.
-		items[idx].Raw = "x " + app.today() + " " + items[idx].Raw
+		// Strip priority then prepend "x YYYY-MM-DD ", matching todo.txt-cli behavior.
+		raw := items[idx].Raw
+		if m := rePriority.FindString(raw); m != "" {
+			raw = raw[len(m):]
+		}
+		items[idx].Raw = "x " + app.today() + " " + raw
 		items[idx] = ParseItem(items[idx].Raw, nr)
 		fmt.Printf("%d %s\n", nr, items[idx].Raw)
 		if app.cfg.Verbose {
@@ -412,7 +421,15 @@ func (app *App) Do(args []string) error {
 		changed = true
 	}
 	if changed {
-		return app.writeTodo(items)
+		if err := app.writeTodo(items); err != nil {
+			return err
+		}
+		if err := backupFile(app.cfg.TodoFile); err != nil {
+			return err
+		}
+		if app.cfg.AutoArchive {
+			return app.Archive()
+		}
 	}
 	return nil
 }
@@ -769,4 +786,25 @@ func containsAny(s string, terms []string) bool {
 		}
 	}
 	return false
+}
+
+// backupFile copies src to src.bak, matching the todo.txt-cli sed -i.bak behavior.
+func backupFile(src string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(src + ".bak")
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = out.ReadFrom(in)
+	return err
 }
