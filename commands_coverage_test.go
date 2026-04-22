@@ -840,8 +840,8 @@ func TestListpri_excludesDoneTasks(t *testing.T) {
 func TestListpri_summaryLine(t *testing.T) {
 	app, _ := newTestApp(t, "(A) One", "(B) Two", "No pri")
 	out := captureStdout(t, func() { app.Listpri(nil) })
-	if !strings.Contains(out, "2 prioritized task(s) shown") {
-		t.Errorf("summary should show 2 prioritized tasks, got:\n%s", out)
+	if !strings.Contains(out, "2 of 2 tasks shown") {
+		t.Errorf("summary should show '2 of 2 tasks shown', got:\n%s", out)
 	}
 }
 

@@ -654,7 +654,7 @@ func (app *App) Listpri(args []string) error {
 	for _, item := range sorted {
 		fmt.Println(FormatItem(item, app.cfg, w))
 	}
-	fmt.Printf("--\nTODO: %d prioritized task(s) shown\n", len(sorted))
+	fmt.Printf("--\nTODO: %d of %d tasks shown\n", len(sorted), len(active))
 	return nil
 }
 
