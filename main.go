@@ -105,7 +105,7 @@ func main() {
 		err = app.Del(rest)
 	case "depri", "dp":
 		err = app.Depri(rest)
-	case "do":
+	case "do", "done":
 		err = app.Do(rest)
 	case "help":
 		printHelp(rest)
@@ -165,7 +165,7 @@ func dispatch(app *App, action string, args []string) error {
 		return app.Del(args)
 	case "depri", "dp":
 		return app.Depri(args)
-	case "do":
+	case "do", "done":
 		return app.Do(args)
 	case "list", "ls":
 		return app.List(args)
@@ -287,7 +287,8 @@ func printHelp(actions []string) {
 		"rm":          "del|rm NR [TERM]\n  Alias for del.",
 		"depri":       "depri|dp NR [NR ...]\n  Removes the priority from each listed task.",
 		"dp":          "depri|dp NR [NR ...]\n  Alias for depri.",
-		"do":          "do NR [NR ...]\n  Marks each listed task as done with today's completion date.",
+		"do":          "do|done NR [NR ...]\n  Marks each listed task as done with today's completion date.",
+		"done":        "do|done NR [NR ...]\n  Alias for do.",
 		"list":        "list|ls [TERM ...]\n  Lists all open tasks sorted by priority. Filters by all TERMs (AND).",
 		"ls":          "list|ls [TERM ...]\n  Alias for list.",
 		"listall":     "listall|lsa [TERM ...]\n  Lists tasks from both todo.txt and done.txt.",

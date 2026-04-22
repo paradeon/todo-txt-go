@@ -567,22 +567,44 @@ func (app *App) Listcon(args []string) error {
 }
 
 // Listfile lists lines from a file in the todo directory.
+// With no arguments it lists all *.txt files in TODO_DIR, matching the
+// original todo.txt-cli behaviour.
 func (app *App) Listfile(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: listfile SRC [TERM...]")
+		entries, err := os.ReadDir(app.cfg.TodoDir)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Files in the todo.txt directory:")
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".txt") {
+				fmt.Println(e.Name())
+			}
+		}
+		return nil
 	}
 	path := app.resolvePath(args[0])
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("TODO: file %s does not exist", args[0])
+	}
 	items, err := ReadItems(path)
 	if err != nil {
 		return err
 	}
 	w := numWidth(len(items))
+	// Total = all non-blank items in the file (before term filter).
+	total := 0
+	for _, item := range items {
+		if item.Raw != "" {
+			total++
+		}
+	}
 	filtered := FilterItems(items, args[1:])
 	sorted := SortByPriority(filtered)
 	for _, item := range sorted {
 		fmt.Println(FormatItem(item, app.cfg, w))
 	}
-	fmt.Printf("--\n%s: %d tasks shown\n", args[0], len(sorted))
+	fmt.Printf("--\n%s: %d of %d tasks shown\n", args[0], len(sorted), total)
 	return nil
 }
 
